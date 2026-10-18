@@ -237,7 +237,8 @@ table.syl tr:hover td{background:#f2fbfa}
 .links-card .credit{font-size:.72rem;color:var(--muted);margin-top:.45rem}
 .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem;margin-top:1rem}
 .media-item{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;position:relative}
-.media-item img{display:block;width:100%;height:180px;object-fit:cover;cursor:zoom-in;background:#eef2f6}
+.media-item img{display:block;width:100%;height:auto;max-height:420px;object-fit:contain;cursor:zoom-in;background:#fff}
+.media-item.wide{grid-column:1/-1}
 .media-item .cap{padding:.45rem .6rem;font-size:.82rem;color:var(--ink-2)}
 .media-item .cred{font-size:.72rem;color:var(--muted)}
 .media-item .del{position:absolute;top:.35rem;right:.35rem;background:rgba(255,255,255,.92);border-radius:8px}
@@ -2519,9 +2520,11 @@ function printHTML(title, subtitle, bodyHtml, opts) {
   bodyHtml = String(bodyHtml || '').replace(/\sloading="lazy"/g, '');
   const doc = auto => `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
     <style>
-      @page { size: A4; margin: 16mm 14mm; }
+      @page { size: A4; margin: 10mm 9mm 12mm; }
+      html { font-size: 18.7px; }
       * { box-sizing: border-box; }
       body { font-family: Georgia, 'Times New Roman', serif; color: #111; line-height: 1.5; max-width: 800px; margin: 0 auto; padding: 1.2rem; }
+      @media print { body { max-width: none; padding: 0; } }
       header.print-head { border-bottom: 2px solid #0f4d67; padding-bottom: .6rem; margin-bottom: 1.2rem; }
       header.print-head .brand { font-family: Arial, Helvetica, sans-serif; font-size: .78rem; letter-spacing: .02em; color: #0f4d67; text-transform: uppercase; }
       header.print-head h1 { font-family: Arial, Helvetica, sans-serif; font-size: 1.5rem; margin: .15rem 0 .1rem; color: #0b2f42; }
@@ -2538,6 +2541,13 @@ function printHTML(title, subtitle, bodyHtml, opts) {
       figure { margin: .8rem 0; text-align: center; page-break-inside: avoid; }
       figure img, figure svg { max-width: 100%; height: auto; }
       figcaption { font-size: .78rem; color: #555; margin-top: .3rem; }
+      /* pictures added to a section: whole, centred, fitted to the page, never split; caption underneath */
+      .media-grid { display: block; margin: .4rem 0; }
+      .media-item { display: block; margin: .9rem auto; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+      .media-item img { display: block; margin: 0 auto; width: auto; height: auto; max-width: 100%; max-height: 175mm; object-fit: contain; }
+      .media-item .cap { font-size: .78rem; color: #444; margin-top: .3rem; text-align: left; }
+      .media-item .cred { font-size: .7rem; color: #777; }
+      .media-video-wrap { display: none; }
       .print-section { page-break-inside: avoid; margin-bottom: 1.4rem; }
       .callout, .mustknow-card, .wp-card { border: 1px solid #bbb; border-left: 4px solid #0f4d67; border-radius: 6px; padding: .45rem .8rem; margin: .7rem 0; page-break-inside: avoid; }
       .callout-h { font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #0b2f42; margin-bottom: .2rem; }
@@ -4743,6 +4753,7 @@ function renderMediaItem(item, onDelete) {
     inner = [el('div', { class: 'empty small', style: 'height:180px;display:grid;place-items:center' }, '⚠ No image set')];
   } else {
     const img = el('img', { src: item.url, alt: item.caption || 'Figure', loading: 'lazy' });
+    img.addEventListener('load', () => { const box = img.closest('.media-item'); if (box && img.naturalWidth > 1.6 * img.naturalHeight) box.classList.add('wide'); }); // wide figure: full row
     img.addEventListener('click', () => openLightbox({ src: item.url, caption: item.caption, credit: item.credit }));
     img.addEventListener('error', () => { img.replaceWith(el('div', { class: 'empty small', style: 'height:180px;display:grid;place-items:center' }, '⚠ Image unavailable offline — ', el('a', { href: item.url, target: '_blank', rel: 'noopener' }, 'open source ↗'))); });
     inner = [img, el('div', { class: 'cap' }, item.caption || '', item.credit ? el('div', { class: 'cred' }, item.credit) : null)];
