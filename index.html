@@ -2513,6 +2513,11 @@ function toCSV(rows) {
  * triggers the browser's native print dialog. bodyHtml is trusted, already-escaped markup
  * (build it from the platform's own renderers, e.g. an existing DOM node's innerHTML).
  */
+/* print-decode: resolves when every picture of the print document is loaded and decoded (max 20 s each), + 400 ms */
+const PRINT_READY_JS = 'function printReady(doc){var im=[].slice.call(doc.images);return Promise.all(im.map(function(i){' +
+  'return (i.complete ? Promise.resolve() : new Promise(function(r){i.addEventListener("load",r);i.addEventListener("error",r);setTimeout(r,20000);}))' +
+  '.then(function(){return i.naturalWidth && i.decode ? i.decode().catch(function(){}) : null;});}))' +
+  '.then(function(){return new Promise(function(r){setTimeout(r,400);});});}';
 /* print-mirror: paper rules applied AFTER the screen stylesheet in every printed page */
 const PRINT_MIRROR_CSS = `
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -2613,7 +2618,7 @@ function printHTML(title, subtitle, bodyHtml, opts) {
     </header>
     <div class="print-body">${bodyHtml}</div>
     <footer class="print-foot">Printed from ${esc(COURSE.title)} · Created by ${esc(AUTHOR)} · ${esc(new Date().toLocaleString())}</footer>
-    ${auto ? '<script>window.onload=()=>{setTimeout(()=>window.print(),150);}<\/script>' : ''}
+    ${auto ? '<script>window.onload=function(){' + PRINT_READY_JS + 'printReady(document).then(function(){window.print();});};<\/script>' : ''}
     </body></html>`;
   const w = window.open('', '_blank');
   if (w) { w.document.write(doc(true)); w.document.close(); return; }
@@ -2622,7 +2627,7 @@ function printHTML(title, subtitle, bodyHtml, opts) {
   document.body.appendChild(f);
   const d = f.contentDocument || (f.contentWindow && f.contentWindow.document);
   if (!d) { f.remove(); toast('Please allow pop-ups to print.', 'warn'); return; }
-  f.addEventListener('load', () => { setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('Please allow pop-ups to print.', 'warn'); } setTimeout(() => f.remove(), 120000); }, 150); }, { once: true });
+  f.addEventListener('load', () => { (new Function(PRINT_READY_JS + 'return printReady;'))()(d).then(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('Please allow pop-ups to print.', 'warn'); } setTimeout(() => f.remove(), 120000); }); }, { once: true });
   d.open(); d.write(doc(false)); d.close();
   toast('Opening the print dialog…', 'info', 3000);
 }
