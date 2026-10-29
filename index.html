@@ -4833,12 +4833,12 @@ function figureSvg(id) { const f = FIGURES[id]; return f ? uniquifySvgIds(f.svg)
 function renderFigure(id, opts) {
   const f = FIGURES[id]; if (!f) return null;
   const host = el('div', { class: 'fig-svg', html: figureSvg(id), title: 'Click to enlarge', tabindex: '0', role: 'button', 'aria-label': 'Enlarge figure: ' + f.title });
-  const open = () => openLightbox({ svg: figureSvg(id), caption: f.title + ' — ' + f.caption, credit: 'Original schematic illustration drawn for this platform from the syllabus text.' });
+  const open = () => openLightbox({ svg: figureSvg(id), caption: f.title + ' — ' + f.caption, credit: f.credit || 'Original schematic illustration drawn for this platform from the syllabus text.' });
   host.addEventListener('click', open);
   host.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
   return el('figure', { class: 'figure-card' + (opts && opts.compact ? ' compact' : '') }, host,
     el('figcaption', null, el('b', null, f.title + '. '), f.caption,
-      el('span', { class: 'fig-credit' }, '🎨 Original schematic drawn for this platform from the syllabus text — not a reproduction of any textbook figure. Click to zoom.')));
+      el('span', { class: 'fig-credit' }, f.credit ? '📄 ' + f.credit + ' Click to zoom.' : '🎨 Original schematic drawn for this platform from the syllabus text — not a reproduction of any textbook figure. Click to zoom.')));
 }
 
 function stepBox(s) {
@@ -17652,7 +17652,7 @@ function uxValidatePathway() {
   let items = []; try { items = StudyEngine.challengeItems(); } catch (e) { warnings.push('Practical images could not be read (' + e.message + ').'); }
   const noTopic = items.filter(i => !i.topic || !all.some(x => x.id === i.topic));
   if (noTopic.length) warnings.push(plural(noTopic.length, 'practical image') + ' could not be linked to a topic, so they do not count towards “Applied”: ' + noTopic.slice(0, 6).map(i => i.title || i.diagnosis).join('; ') + (noTopic.length > 6 ? '…' : '') + '.');
-  if (!all.some(t => t.id === 't17')) errors.push('The Apply page links to topic t17 (practical reading), which does not exist.');
+  if (UX_ALL_UNITS.some(u => (u.topics || []).includes('t17')) && !all.some(t => t.id === 't17')) errors.push('The Apply page links to topic t17 (practical reading), which does not exist.');
   return { errors, warnings, links, checked: new Date().toISOString() };
 }
 function uxCaseUnit(c) { const t = (c.topics || [])[0]; return t ? UXP.unitOf(t) : null; }
@@ -19298,8 +19298,8 @@ function pmFigure(o, hide) {
   let cap = null, meta = '', credit = null, lb = null;
   if (o.kind === 'fig') {
     box.appendChild(el('div', { class: 'gal-svg', html: figureSvg(o.id) }));
-    cap = o.f.title; meta = 'Schematic'; credit = el('span', null, 'Original schematic (course illustration)');
-    lb = () => openLightbox({ svg: figureSvg(o.id), caption: o.f.title + ' — ' + o.f.caption, credit: 'Original schematic illustration drawn for this platform from the syllabus text.' });
+    cap = o.f.title; meta = o.f.credit ? 'Figure' : 'Schematic'; credit = el('span', null, o.f.credit || 'Original schematic (course illustration)');
+    lb = () => openLightbox({ svg: figureSvg(o.id), caption: o.f.title + ' — ' + o.f.caption, credit: o.f.credit || 'Original schematic illustration drawn for this platform from the syllabus text.' });
   } else if (o.kind === 'atlas') {
     const x = o.x;
     box.appendChild(atlasImgEl(x, hide ? ATLAS.kindLabel(x.kind) + ' pathology image — identify it' : x.dx, true));
